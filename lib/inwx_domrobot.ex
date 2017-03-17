@@ -26,7 +26,7 @@ defmodule InwxDomrobot do
   Returns nothing, since all message passing is abstracted internally.
   """
   def start_link do
-    {:ok, _pid} = GenServer.start_link(__MODULE__, [""], name: :inwxdomrobot)
+    {:ok, _pid} = GenServer.start_link(__MODULE__, [{"domrobot", "none"}], name: :inwxdomrobot)
   end
 
 
@@ -114,7 +114,7 @@ defmodule InwxDomrobot do
     }
 
     bodydata = XMLRPC.encode!(request)
-    HTTPoison.post(api_url(), bodydata, hackney: [cookie: session])
+    HTTPoison.post(api_url(), bodydata, [], hackney: [cookie: session])
     |> handle_query(session)
   end
 
@@ -131,7 +131,8 @@ defmodule InwxDomrobot do
         _ -> false
       end)
 
-      {:reply, {:ok, code}, cookies}
+      [{_key, value}] = cookies
+      {:reply, {:ok, code}, [value]}
     else
       {:reply, {:unauthorized, code}, session}
     end

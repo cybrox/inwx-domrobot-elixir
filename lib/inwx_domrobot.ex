@@ -142,6 +142,15 @@ defmodule InwxDomrobot do
   end
 
 
+  defp handle_query({:ok, response}, session) do
+    {:reply, XMLRPC.decode(response.body), session}
+  end
+
+  defp handle_query(resp, session) do
+    {:reply, resp, session}
+  end
+
+
   defp api_url do
     Map.get(@apiurl, Mix.env)
   end

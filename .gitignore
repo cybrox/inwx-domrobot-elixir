@@ -1,0 +1,10 @@
+# Ignore Mix directories
+/_build
+/cover
+/deps
+/doc
+/.fetch
+
+# Ignore dumps and artifacts
+erl_crash.dump
+*.ez

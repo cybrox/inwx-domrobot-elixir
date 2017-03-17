@@ -26,7 +26,7 @@ defmodule InwxDomrobot do
   Returns nothing, since all message passing is abstracted internally.
   """
   def start_link do
-    {:ok, _pid} = GenServer.start_link(__MODULE__, [], name: :inwxdomrobot)
+    {:ok, _pid} = GenServer.start_link(__MODULE__, [""], name: :inwxdomrobot)
   end
 
 
@@ -37,7 +37,7 @@ defmodule InwxDomrobot do
   a successful response, the module will hold the received cookie for futher requests.
 
   There are three possible return tuples for this method.
-  If the HTTPoison request failed `{:error, %HTTPoison.Error}`
+  If the HTTPoison request failed: `{:error, %HTTPoison.Error}`
   If the successful request returned an error code: `{:unauthorized, code}`
   If the successful request returned a success code: `{:ok, code}`
   """
@@ -53,7 +53,7 @@ defmodule InwxDomrobot do
   with valid credentials afterwards, in order to make any further requests.
 
   There are two possible return tuples for this method.
-  If the HTTPoison request failed `{:error, %HTTPoison.Error}`
+  If the HTTPoison request failed: `{:error, %HTTPoison.Error}`
   If the request was successful: `{:ok, %HTTPoison.Response}`
   """
   def logout do
@@ -61,8 +61,17 @@ defmodule InwxDomrobot do
   end
 
 
+  @doc """
+  Send a custom request to the INWX API.
+  This method takes a method name and optionally some parameters that will be
+  sent to the INWX API. The method name and the respective parameters used can
+  be found in the official DomRobot API documentation.
 
-  def query(method_name, params) do
+  There are two possible return tuples for this method.
+  If the HTTPoison request failed: `{:error, %HTTPoison.Error}`
+  If the request was successful: `{:ok, %XMLRPC.MethodResponse}`
+  """
+  def query(method_name, params \\ []) do
     GenServer.call(:inwxdomrobot, {:query, method_name, params})
   end
 
@@ -93,7 +102,7 @@ defmodule InwxDomrobot do
     }
 
     bodydata = XMLRPC.encode!(request)
-    HTTPoison.post(api_url(), bodydata)
+    HTTPoison.post(api_url(), bodydata, hackney: [cookie: session])
     |> handle_logout(session)
   end
 
@@ -105,7 +114,7 @@ defmodule InwxDomrobot do
     }
 
     bodydata = XMLRPC.encode!(request)
-    HTTPoison.post(api_url(), bodydata)
+    HTTPoison.post(api_url(), bodydata, hackney: [cookie: session])
     |> handle_query(session)
   end
 
@@ -128,16 +137,16 @@ defmodule InwxDomrobot do
     end
   end
 
-  defp handle_login(resp) do
+  defp handle_login(resp, session) do
     {:reply, resp, session}
   end
 
 
-  defp handle_logout(resp = {:ok, response}, _session) do
-    {:reply, resp, []}
+  defp handle_logout(resp = {:ok, _response}, _session) do
+    {:reply, resp, [""]}
   end
 
-  defp handle_logout(resp, sesion) do
+  defp handle_logout(resp, session) do
     {:reply, resp, session}
   end
 

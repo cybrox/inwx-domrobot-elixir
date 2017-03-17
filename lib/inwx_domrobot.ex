@@ -21,24 +21,55 @@ defmodule InwxDomrobot do
   }
 
 
+  @doc """
+  Start the INWX Domrobot GenServer process
+  Returns nothing, since all message passing is abstracted internally.
+  """
   def start_link do
     {:ok, _pid} = GenServer.start_link(__MODULE__, [], name: :inwxdomrobot)
   end
 
+
+  @doc """
+  Send an account.login request to the INWX API.
+  This method takes a username and password, it is recommended you load those from
+  your environment instead of hard-coding them into the application. Upon receiving
+  a successful response, the module will hold the received cookie for futher requests.
+
+  There are three possible return tuples for this method.
+  If the HTTPoison request failed `{:error, %HTTPoison.Error}`
+  If the successful request returned an error code: `{:unauthorized, code}`
+  If the successful request returned a success code: `{:ok, code}`
+  """
   def login(username, password) do
     GenServer.call(:inwxdomrobot, {:login, username, password,})
   end
 
+
+  @doc """
+  Send an account.logout request to the INWX API.
+  After receiving a successful response to the logout request, the module will
+  discard the current session cookie. InwxDomrobot.login needs to be called again
+  with valid credentials afterwards, in order to make any further requests.
+
+  There are two possible return tuples for this method.
+  If the HTTPoison request failed `{:error, %HTTPoison.Error}`
+  If the request was successful: `{:ok, %HTTPoison.Response}`
+  """
   def logout do
     GenServer.call(:inwxdomrobot, {:logout})
   end
 
-  def query(query) do
-    GenServer.call(:inwxdomrobot, {:query, query})
+
+
+  def query(method_name, params) do
+    GenServer.call(:inwxdomrobot, {:query, method_name, params})
   end
 
 
-  def handle_call({:login, username, password}, _from, _session) do
+
+
+  def handle_call({:login, username, password}, _from, session) do
     request = %XMLRPC.MethodCall{
       method_name: "account.login",
       params: [
@@ -52,11 +83,36 @@ defmodule InwxDomrobot do
 
     bodydata = XMLRPC.encode!(request)
     HTTPoison.post(api_url(), bodydata)
-    |> handle_login
+    |> handle_login(session)
   end
 
 
-  defp handle_login({:ok, response}) do
+  def handle_call({:logout}, _from, session) do
+    request = %XMLRPC.MethodCall{
+      method_name: "account.logout"
+    }
+
+    bodydata = XMLRPC.encode!(request)
+    HTTPoison.post(api_url(), bodydata)
+    |> handle_logout(session)
+  end
+
+
+  def handle_call({:query, method_name, params}, _from, session) do
+    request = %XMLRPC.MethodCall{
+      method_name: method_name,
+      params: params
+    }
+
+    bodydata = XMLRPC.encode!(request)
+    HTTPoison.post(api_url(), bodydata)
+    |> handle_query(session)
+  end
+
+
+
+
+  defp handle_login({:ok, response}, session) do
     {:ok, decoded} = XMLRPC.decode(response.body)
     code = Map.get(decoded.param, "code")
 
@@ -68,13 +124,23 @@ defmodule InwxDomrobot do
 
       {:reply, {:ok, code}, cookies}
     else
-      {:reply, {:error, code}, []}
+      {:reply, {:unauthorized, code}, session}
     end
   end
 
-  defp handle_login(resp = {:error, response}) do
+  defp handle_login(resp) do
+    {:reply, resp, session}
+  end
+
+
+  defp handle_logout(resp = {:ok, response}, _session) do
     {:reply, resp, []}
   end
+
+  defp handle_logout(resp, sesion) do
+    {:reply, resp, session}
+  end
+
 
   defp api_url do
     Map.get(@apiurl, Mix.env)

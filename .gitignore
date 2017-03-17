@@ -8,3 +8,6 @@
 # Ignore dumps and artifacts
 erl_crash.dump
 *.ez
+
+# Ignore config, since there is nothing there
+/config

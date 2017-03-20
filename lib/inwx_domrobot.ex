@@ -38,7 +38,7 @@ defmodule InwxDomrobot do
 
   There are three possible return tuples for this method.
   If the HTTPoison request failed: `{:error, %HTTPoison.Error}`
-  If the successful request returned an error code: `{:unauthorized, code}`
+  If the successful request returned an error code: `{:error, {:unauthorized, code}}`
   If the successful request returned a success code: `{:ok, code}`
   """
   def login(username, password) do
@@ -134,7 +134,7 @@ defmodule InwxDomrobot do
       [{_key, value}] = cookies
       {:reply, {:ok, code}, [value]}
     else
-      {:reply, {:unauthorized, code}, session}
+      {:reply, {:error, {:unauthorized, code}}, session}
     end
   end
 

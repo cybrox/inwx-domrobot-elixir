@@ -30,8 +30,13 @@ iex(3)> InwxDomrobot.query conn, "account.info"
   ...
 }}}
 
+iex(4)> InwxDomrobot.query conn, "account.update", [%{ firstname: "Sven" }]
+{:ok, %XMLRPC.MethodResponse{param: %{"code" => 1001,
+  ...
+}}}
+
 # Send an "account.logout" request to the connection
-iex(4)> InwxDomrobot.logout conn
+iex(5)> InwxDomrobot.logout conn
 {:ok,
  %XMLRPC.MethodResponse{param: %{"code" => 1500,
     "msg" => "Command completed successfully; ending session",

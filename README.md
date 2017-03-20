@@ -5,7 +5,7 @@ Please note that 2FA is currently not supported with this client.
 
 
 ## Installation
-Install from [hex.pm](https://hex.pm/)
+Install from [hex.pm](https://hex.pm/packages/inwx_domrobot)
 
 ```elixir
 def deps do

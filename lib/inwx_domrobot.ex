@@ -23,10 +23,10 @@ defmodule InwxDomrobot do
 
   @doc """
   Start the INWX Domrobot GenServer process
-  Returns nothing, since all message passing is abstracted internally.
+  Returns typical GenServer response, e.g. `{:ok, connection}`
   """
   def start_link do
-    {:ok, _pid} = GenServer.start_link(__MODULE__, [""], name: :inwxdomrobot)
+    GenServer.start_link(__MODULE__, [""])
   end
 
 
@@ -41,8 +41,8 @@ defmodule InwxDomrobot do
   If the successful request returned an error code: `{:error, {:unauthorized, code}}`
   If the successful request returned a success code: `{:ok, code}`
   """
-  def login(username, password) do
-    GenServer.call(:inwxdomrobot, {:login, username, password,})
+  def login(connection, username, password) do
+    GenServer.call(connection, {:login, username, password,})
   end
 
 
@@ -56,8 +56,8 @@ defmodule InwxDomrobot do
   If the HTTPoison request failed: `{:error, %HTTPoison.Error}`
   If the request was successful: `{:ok, %HTTPoison.Response}`
   """
-  def logout do
-    GenServer.call(:inwxdomrobot, {:logout})
+  def logout(connection) do
+    GenServer.call(connection, {:logout})
   end
 
 
@@ -71,8 +71,8 @@ defmodule InwxDomrobot do
   If the HTTPoison request failed: `{:error, %HTTPoison.Error}`
   If the request was successful: `{:ok, %XMLRPC.MethodResponse}`
   """
-  def query(method_name, params \\ []) do
-    GenServer.call(:inwxdomrobot, {:query, method_name, params})
+  def query(connection, method_name, params \\ []) do
+    GenServer.call(connection, {:query, method_name, params})
   end
 
 

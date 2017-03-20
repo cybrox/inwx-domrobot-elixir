@@ -16,18 +16,22 @@ end
 
 ## Usage
 ```elixir
-# Send an "account.login" request to the API
-iex(1)> InwxDomrobot.login "username", "password"
+# Start a new connection
+iex(1)> {:ok, conn} = InwxDomrobot.start_link
+{:ok, PID<0.213.0>}
+
+# Send an "account.login" request to the connection
+iex(2)> InwxDomrobot.login conn, "username", "password"
 {:ok, 1000}
 
-# Send arbitrary commands to the API
-iex(2)> InwxDomrobot.query "account.info"
+# Send arbitrary commands to the connection
+iex(3)> InwxDomrobot.query conn, "account.info"
 {:ok, %XMLRPC.MethodResponse{param: %{"code" => 1000,
   ...
 }}}
 
-# Send an "account.logout" request to the API
-iex(3)> InwxDomrobot.logout
+# Send an "account.logout" request to the connection
+iex(4)> InwxDomrobot.logout conn
 {:ok,
  %XMLRPC.MethodResponse{param: %{"code" => 1500,
     "msg" => "Command completed successfully; ending session",

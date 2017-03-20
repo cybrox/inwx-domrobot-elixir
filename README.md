@@ -1,11 +1,11 @@
 # InwxDomrobot
+[INWX](https://www.inwx.com/en/) offers a complete XML-RPC API covering most of their sites features. The DomRobot API allows you to manage accounts, domains, name servers and much more directly from your application. Considering the way their API is built, this package merely acts as a cookie storage and an XML encoder/decoder proxy.
 
-**TODO: Add description**
+Please note that 2FA is currently not supported with this client.
+
 
 ## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `inwx_domrobot` to your list of dependencies in `mix.exs`:
+Install via **hex** by adding `inwx_domrobot` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -13,7 +13,20 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/inwx_domrobot](https://hexdocs.pm/inwx_domrobot).
 
+## Usage
+```elixir
+# Send an "account.login" request to the API
+InwxDomrobot.login "username", "password"
+
+# Send arbitrary commands to the API
+InwxDomrobot.query "account.info"
+InwxDomrobot.query "acocunt.update", [
+  %{
+    username: "example",
+  }
+]
+
+# Send an "account.logout" request to the API
+iex(4)> InwxDomrobot.logout
+```

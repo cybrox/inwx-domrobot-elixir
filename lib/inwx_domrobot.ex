@@ -26,7 +26,7 @@ defmodule InwxDomrobot do
   Returns nothing, since all message passing is abstracted internally.
   """
   def start_link do
-    {:ok, _pid} = GenServer.start_link(__MODULE__, [{"domrobot", "none"}], name: :inwxdomrobot)
+    {:ok, _pid} = GenServer.start_link(__MODULE__, [""], name: :inwxdomrobot)
   end
 
 
@@ -96,13 +96,17 @@ defmodule InwxDomrobot do
   end
 
 
+  def handle_call({:logout}, _from, [""]) do
+    {:reply, {:ok, "not logged in"}, [""]}
+  end
   def handle_call({:logout}, _from, session) do
     request = %XMLRPC.MethodCall{
-      method_name: "account.logout"
+      method_name: "account.logout",
+      params: []
     }
 
     bodydata = XMLRPC.encode!(request)
-    HTTPoison.post(api_url(), bodydata, hackney: [cookie: session])
+    HTTPoison.post(api_url(), bodydata, [], hackney: [cookie: session])
     |> handle_logout(session)
   end
 

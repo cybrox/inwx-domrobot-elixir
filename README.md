@@ -5,7 +5,7 @@ Please note that 2FA is currently not supported with this client.
 
 
 ## Installation
-Install via **hex** by adding `inwx_domrobot` to your list of dependencies in `mix.exs`:
+Install from [hex.pm](https://hex.pm/)
 
 ```elixir
 def deps do

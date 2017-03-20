@@ -147,8 +147,9 @@ defmodule InwxDomrobot do
   end
 
 
-  defp handle_logout(resp = {:ok, _response}, _session) do
-    {:reply, resp, [""]}
+  defp handle_logout({:ok, response}, _session) do
+    {:ok, decoded} = XMLRPC.decode(response.body)
+    {:reply, {:ok, decoded}, [""]}
   end
 
   defp handle_logout(resp, session) do

@@ -17,16 +17,19 @@ end
 ## Usage
 ```elixir
 # Send an "account.login" request to the API
-InwxDomrobot.login "username", "password"
+iex(1)> InwxDomrobot.login "username", "password"
+{:ok, 1000}
 
 # Send arbitrary commands to the API
-InwxDomrobot.query "account.info"
-InwxDomrobot.query "acocunt.update", [
-  %{
-    username: "example",
-  }
-]
+iex(2)> InwxDomrobot.query "account.info"
+{:ok, %XMLRPC.MethodResponse{param: %{"code" => 1000,
+  ...
+}}}
 
 # Send an "account.logout" request to the API
-iex(4)> InwxDomrobot.logout
+iex(3)> InwxDomrobot.logout
+{:ok,
+ %XMLRPC.MethodResponse{param: %{"code" => 1500,
+    "msg" => "Command completed successfully; ending session",
+    "runtime" => 0.0264, "svTRID" => "..."}}}
 ```

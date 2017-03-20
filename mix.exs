@@ -12,7 +12,7 @@ defmodule InwxDomrobot.Mixfile do
 
       name: "INWX DomRobot",
       description: "Simple interface for INWX DomRobot in Elixir",
-      source_url: "https://github.com/cybrox/inwx-domrobot",
+      source_url: "https://github.com/cybrox/inwx-domrobot-elixir",
       package: package()
    ]
   end
@@ -23,7 +23,7 @@ defmodule InwxDomrobot.Mixfile do
     [
       licenses: ["MIT"],
       maintainers: ["Sven Gehring <cbrxde@gmail.com>"],
-      links: %{github: "https://github.com/cybrox/inwx-domrobot"}
+      links: %{github: "https://github.com/cybrox/inwx-domrobot-elixir"}
     ]
   end
 
@@ -40,7 +40,11 @@ defmodule InwxDomrobot.Mixfile do
       {:httpoison, "~> 0.10.0"},
       
       {:erlsom, github: "willemdj/erlsom"},
-      {:xmlrpc, "~> 0.1"}
+      {:xmlrpc, "~> 0.1"},
+
+
+      # Development dependencies
+      {:ex_doc, "~> 0.14", only: :dev, runtime: false}
     ]
   end
 end

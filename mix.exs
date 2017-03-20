@@ -38,10 +38,7 @@ defmodule InwxDomrobot.Mixfile do
   defp deps do
     [
       {:httpoison, "~> 0.10.0"},
-      
-      {:erlsom, github: "willemdj/erlsom"},
-      {:xmlrpc, "~> 0.1"},
-
+      {:xmlrpc, "~> 1.1"},
 
       # Development dependencies
       {:ex_doc, "~> 0.14", only: :dev, runtime: false}

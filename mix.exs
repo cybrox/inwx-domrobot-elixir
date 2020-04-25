@@ -37,7 +37,7 @@ defmodule InwxDomrobot.Mixfile do
   # Dependencies 
   defp deps do
     [
-      {:httpoison, "~> 0.10.0"},
+      {:httpoison, "~> 1.6.2"},
       {:xmlrpc, "~> 1.1"},
 
       # Development dependencies

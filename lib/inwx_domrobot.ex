@@ -1,10 +1,6 @@
 defmodule InwxDomrobot do
   use GenServer
 
-  def init(init_arg) do
-    {:ok, init_arg}
-  end
-
   @moduledoc """
   An Elixir implementation of the INWX DomRobot.
   INWX offers a complete XML-RPC API covering most of their sites features.
@@ -29,10 +25,13 @@ defmodule InwxDomrobot do
   Start the INWX Domrobot GenServer process
   Returns typical GenServer response, e.g. `{:ok, connection}`
   """
-  def start_link do
-    GenServer.start_link(__MODULE__, [""])
+  def start_link(options \\ []) do
+    GenServer.start_link(__MODULE__, [:inwx], options)
   end
 
+  def init(init_arg) do
+    {:ok, init_arg}
+  end
 
   @doc """
   Send an account.login request to the INWX API.
@@ -45,9 +44,9 @@ defmodule InwxDomrobot do
   If the successful request returned an error code: `{:error, {:unauthorized, code}}`
   If the successful request returned a success code: `{:ok, code}`
   """
-  def login(connection, username, password), do: login(connection, username, password, "")
-  def login(connection, username, password, secret) do
-    GenServer.call(connection, {:login, username, password, secret})
+  def login(conn, username, password), do: login(conn, username, password, "")
+  def login(conn, username, password, secret) do
+    GenServer.call(conn, {:login, username, password, secret})
   end
 
 

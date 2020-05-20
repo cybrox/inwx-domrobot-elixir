@@ -15,9 +15,9 @@ defmodule InwxDomrobot do
 
 
   @apiurl %{
-    dev:  "https://api.ote.domrobot.com/xmlrpc/",
-    test: "https://api.ote.domrobot.com/xmlrpc/",
-    prod: "https://api.domrobot.com/xmlrpc/"
+    dev:  "https://api.ote.domrobot.com/jsonrpc/",
+    test: "https://api.ote.domrobot.com/jsonrpc/",
+    prod: "https://api.domrobot.com/jsonrpc/"
   }
 
 
@@ -25,10 +25,13 @@ defmodule InwxDomrobot do
   Start the INWX Domrobot GenServer process
   Returns typical GenServer response, e.g. `{:ok, connection}`
   """
-  def start_link do
-    GenServer.start_link(__MODULE__, [""])
+  def start_link(options \\ []) do
+    GenServer.start_link(__MODULE__, [:inwx], options)
   end
 
+  def init(init_arg) do
+    {:ok, init_arg}
+  end
 
   @doc """
   Send an account.login request to the INWX API.
@@ -41,8 +44,9 @@ defmodule InwxDomrobot do
   If the successful request returned an error code: `{:error, {:unauthorized, code}}`
   If the successful request returned a success code: `{:ok, code}`
   """
-  def login(connection, username, password) do
-    GenServer.call(connection, {:login, username, password,})
+  def login(conn, username, password), do: login(conn, username, password, "")
+  def login(conn, username, password, secret) do
+    GenServer.call(conn, {:login, username, password, secret})
   end
 
 
@@ -75,59 +79,51 @@ defmodule InwxDomrobot do
     GenServer.call(connection, {:query, method_name, params})
   end
 
-
-
-
-  def handle_call({:login, username, password}, _from, session) do
-    request = %XMLRPC.MethodCall{
-      method_name: "account.login",
-      params: [
-        %{
+  def handle_call({:login, username, password, secret}, _from, session) do
+    request = %{
+      method: "account.login",
+      params: %{
           user: username,
           pass: password,
           lang: "en"
-        }
-      ]
+      }
     }
 
-    bodydata = XMLRPC.encode!(request)
+    bodydata = Jason.encode!(request)
     HTTPoison.post(api_url(), bodydata)
-    |> handle_login(session)
+    |> handle_login(session, secret)
   end
-
 
   def handle_call({:logout}, _from, [""]) do
     {:reply, {:ok, "not logged in"}, [""]}
   end
+
   def handle_call({:logout}, _from, session) do
-    request = %XMLRPC.MethodCall{
-      method_name: "account.logout",
+    request = %{
+      method: "account.logout",
       params: []
     }
 
-    bodydata = XMLRPC.encode!(request)
+    bodydata = Jason.encode!(request)
     HTTPoison.post(api_url(), bodydata, [], hackney: [cookie: session])
     |> handle_logout(session)
   end
 
 
   def handle_call({:query, method_name, params}, _from, session) do
-    request = %XMLRPC.MethodCall{
-      method_name: method_name,
+    request = %{
+      method: method_name,
       params: params
     }
 
-    bodydata = XMLRPC.encode!(request)
+    bodydata = Jason.encode!(request)
     HTTPoison.post(api_url(), bodydata, [], hackney: [cookie: session])
     |> handle_query(session)
   end
 
-
-
-
-  defp handle_login({:ok, response}, session) do
-    {:ok, decoded} = XMLRPC.decode(response.body)
-    code = Map.get(decoded.param, "code")
+  defp handle_login({:ok, response}, session, secret) do
+    {:ok, decoded} = Jason.decode(response.body)
+    code = Map.get(decoded, "code")
 
     if code == 1000 do
       cookies = Enum.filter(response.headers, fn
@@ -135,20 +131,44 @@ defmodule InwxDomrobot do
         _ -> false
       end)
 
-      [{_key, value}] = cookies
-      {:reply, {:ok, code}, [value]}
+      [{_key, session_value}] = cookies
+
+      if get_in(decoded, ["resData", "tfa"]) != "0" do
+        handle_unlock(secret, [session_value])
+      else
+        {:reply, {:ok, code}, [session_value]}
+      end
     else
       {:reply, {:error, {:unauthorized, code}}, session}
     end
   end
 
-  defp handle_login(resp, session) do
+  defp handle_login(resp, session, _) do
     {:reply, resp, session}
   end
 
+  defp handle_unlock(secret, session) do
+    # TODO check if secret is nil
+    otp = Totpex.generate_totp(secret)
+    request = %{
+      method: "account.unlock",
+      params: %{tan: otp}
+    }
+
+    bodydata = Jason.encode!(request)
+    {:ok, response} = HTTPoison.post(api_url(), bodydata, [], hackney: [cookie: session])
+    {:ok, decoded} = Jason.decode(response.body)
+    code = Map.get(decoded, "code")
+
+    if code == 1000 do
+      {:reply, {:ok, code}, session}
+    else
+      {:reply, {:error, {:unauthorized, code, Map.get(decoded, "msg")}}, session}
+    end
+  end
 
   defp handle_logout({:ok, response}, _session) do
-    {:ok, decoded} = XMLRPC.decode(response.body)
+    {:ok, decoded} = Jason.decode(response.body)
     {:reply, {:ok, decoded}, [""]}
   end
 
@@ -156,15 +176,13 @@ defmodule InwxDomrobot do
     {:reply, resp, session}
   end
 
-
   defp handle_query({:ok, response}, session) do
-    {:reply, XMLRPC.decode(response.body), session}
+    {:reply, Jason.decode(response.body), session}
   end
 
   defp handle_query(resp, session) do
     {:reply, resp, session}
   end
-
 
   defp api_url do
     Map.get(@apiurl, Mix.env)

@@ -13,7 +13,10 @@ defmodule InwxDomrobot.Mixfile do
       name: "INWX DomRobot",
       description: "Simple API wrapper for INWX DomRobot in Elixir",
       source_url: "https://github.com/cybrox/inwx-domrobot-elixir",
-      package: package()
+      package: package(),
+
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [coveralls: :test]
    ]
   end
 
@@ -36,6 +39,7 @@ defmodule InwxDomrobot.Mixfile do
       {:jason, "~> 1.1"},
 
       {:ex_doc, "~> 0.14", only: :dev, runtime: false},
+      {:excoveralls, "~> 0.12.3", only: :test},
       {:mock, "~> 0.3.4", only: :test}
     ]
   end

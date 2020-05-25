@@ -28,6 +28,9 @@ defmodule InwxDomrobot do
 
   @default_endpoint Map.get(@endpoints, :dev)
 
+  @type auth_success() :: {:ok, integer}
+  @type auth_error() :: {:unauthorized, integer} | {:unauthorized, integer, binary}
+
   # ---
   # Server
   # ---
@@ -86,7 +89,7 @@ defmodule InwxDomrobot do
 
   defp handle_login({:ok, response}, state, tfa_info) do
     {:ok, decoded} = Jason.decode(response.body)
-    tfa_method = get_in(decoded, ["resData", "tfa"])
+    tfa_method = get_in(decoded, ["resData", "tfa"]) || "0"
     result_code = Map.get(decoded, "code")
 
     if result_code == 1000 do
@@ -184,7 +187,9 @@ defmodule InwxDomrobot do
   * `{:secret, "my-secret"}` - Providing the secret, the library will generate the TOTP.
   * `{:totp, "000000"}` - Providing a TOTP directly, useful for CLI applications.
   """
-  def login(conn, username, password, tfa_info \\ "") do
+  @spec login(pid, binary, binary, {atom, binary} | nil) ::
+          auth_success() | auth_success() | {:error, Mojito.Error.t()}
+  def login(conn, username, password, tfa_info \\ nil) do
     GenServer.call(conn, {:login, username, password, tfa_info})
   end
 

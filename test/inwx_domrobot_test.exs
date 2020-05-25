@@ -19,34 +19,82 @@ defmodule InwxDomrobotTest do
 
   describe "login/3" do
     test "sends properly formatted login request" do
+      exp_login_payload = Jason.encode!(%{
+        method: "account.login",
+        params: %{
+          lang: "en",
+          user: "username",
+          pass: "password"
+        }
+      })
+
       with_mock(Mojito, [], post: fn _, _, _ -> {:error, :aborted} end) do
         {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
         {:error, :aborted} = InwxDomrobot.login(conn, "username", "password")
+        assert_called(Mojito.post(@dummy_endpoint, [], exp_login_payload))
+      end
+    end
 
-        assert_called(
-          Mojito.post(
-            @dummy_endpoint,
-            [],
-            Jason.encode!(%{
-              method: "account.login",
-              params: %{
-                lang: "en",
-                user: "username",
-                pass: "password"
-              }
-            })
-          )
-        )
+    test "sends properly formatted unlock request" do
+      dummy_login_response = %Mojito.Response{
+        headers: [{"set-cookie", "domrobot=sessioncookie; path=/"}],
+        body: Jason.encode!(%{code: 1000, resData: %{tfa: "GOOGLE_AUTHENTICATOR"}})
+      }
+
+      exp_login_payload =
+        Jason.encode!(%{
+          method: "account.login",
+          params: %{
+            lang: "en",
+            user: "username",
+            pass: "password"
+          }
+        })
+
+      exp_unlock_header = [
+        {"cookies", "domrobot=sessioncookie; path=/"}
+      ]
+
+      exp_unlock_payload_one =
+        Jason.encode!(%{
+          method: "account.unlock",
+          params: %{
+            tan: "202020"
+          }
+        })
+
+      exp_unlock_payload_two =
+        Jason.encode!(%{
+          method: "account.unlock",
+          params: %{
+            tan: Totpex.generate_totp("mySecret")
+          }
+        })
+
+      with_mock(Mojito, [], post: fn _, _, _ -> {:ok, dummy_login_response} end) do
+        {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
+        {:ok, 1000} = InwxDomrobot.login(conn, "username", "password", {:totp, "202020"})
+
+        assert_called(Mojito.post(@dummy_endpoint, [], exp_login_payload))
+        assert_called(Mojito.post(@dummy_endpoint, exp_unlock_header, exp_unlock_payload_one))
+      end
+
+      with_mock(Mojito, [], post: fn _, _, _ -> {:ok, dummy_login_response} end) do
+        {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
+        {:ok, 1000} = InwxDomrobot.login(conn, "username", "password", {:secret, "mySecret"})
+
+        assert_called(Mojito.post(@dummy_endpoint, [], exp_login_payload))
+        assert_called(Mojito.post(@dummy_endpoint, exp_unlock_header, exp_unlock_payload_two))
       end
     end
 
     test "returns ok and stores session when login without tfa was successful" do
-      dummy_response = %Mojito.Response{
+      dummy_login_response = %Mojito.Response{
         headers: [{"set-cookie", "domrobot=sessioncookie; path=/"}],
         body: Jason.encode!(%{code: 1000})
       }
 
-      with_mock(Mojito, [], post: fn _, _, _ -> {:ok, dummy_response} end) do
+      with_mock(Mojito, [], post: fn _, _, _ -> {:ok, dummy_login_response} end) do
         {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
         assert InwxDomrobot.login(conn, "username", "password") == {:ok, 1000}
         assert :sys.get_state(conn).session == [{"cookies", "domrobot=sessioncookie; path=/"}]
@@ -54,20 +102,20 @@ defmodule InwxDomrobotTest do
     end
 
     test "returns ok and stores session when login with tfa was successful" do
-      dummy_response_one = %Mojito.Response{
+      dummy_login_response = %Mojito.Response{
         headers: [{"set-cookie", "domrobot=sessioncookie; path=/"}],
         body: Jason.encode!(%{code: 1000, resData: %{tfa: "GOOGLE_AUTHENTICATOR"}})
       }
 
-      dummy_response_two = %Mojito.Response{
+      dummy_unlock_response = %Mojito.Response{
         body: Jason.encode!(%{code: 1000})
       }
 
       with_mock(Mojito, [],
         post: fn _, _, body ->
           case body |> Jason.decode!() |> Map.get("method") do
-            "account.login" -> {:ok, dummy_response_one}
-            "account.unlock" -> {:ok, dummy_response_two}
+            "account.login" -> {:ok, dummy_login_response}
+            "account.unlock" -> {:ok, dummy_unlock_response}
           end
         end
       ) do
@@ -77,7 +125,7 @@ defmodule InwxDomrobotTest do
       end
     end
 
-    test "returns raw error when mojito returned an error on login" do
+    test "returns raw error when Mojito returned an error on login" do
       with_mock(Mojito, [], post: fn _, _, _ -> {:error, %Mojito.Error{}} end) do
         {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
         assert InwxDomrobot.login(conn, "username", "password") == {:error, %Mojito.Error{}}
@@ -85,21 +133,24 @@ defmodule InwxDomrobotTest do
     end
 
     test "returns error when a non-1000 result code was returned on login" do
-      dummy_response = %Mojito.Response{body: Jason.encode!(%{code: 2002})}
+      dummy_login_response = %Mojito.Response{body: Jason.encode!(%{code: 2002})}
 
-      with_mock(Mojito, [], post: fn _, _, _ -> {:ok, dummy_response} end) do
+      with_mock(Mojito, [], post: fn _, _, _ -> {:ok, dummy_login_response} end) do
         {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
         assert InwxDomrobot.login(conn, "username", "password") == {:error, {:unauthorized, 2002}}
       end
     end
 
-    test "returns raw error when mojitor returned an error on unlock" do
-      dummy_response_one = %Mojito.Response{body: Jason.encode!(%{code: 1000})}
+    test "returns raw error when Mojito returned an error on unlock" do
+      dummy_login_response = %Mojito.Response{body: Jason.encode!(%{
+        code: 1000,
+        resData: %{tfa: "GOOGLE_AUTHENTICATOR"}
+      })}
 
       with_mock(Mojito, [],
         post: fn _, _, body ->
           case body |> Jason.decode!() |> Map.get("method") do
-            "account.login" -> {:ok, dummy_response_one}
+            "account.login" -> {:ok, dummy_login_response}
             "account.unlock" -> {:error, %Mojito.Error{}}
           end
         end
@@ -112,14 +163,18 @@ defmodule InwxDomrobotTest do
     end
 
     test "returns error when a non-1000 result was returned on unlock" do
-      dummy_response_one = %Mojito.Response{body: Jason.encode!(%{code: 1000})}
-      dummy_response_two = %Mojito.Response{body: Jason.encode!(%{code: 2002, msg: "failed!"})}
+      dummy_login_response = %Mojito.Response{body: Jason.encode!(%{
+        code: 1000,
+        resData: %{tfa: "GOOGLE_AUTHENTICATOR"}
+      })}
+
+      dummy_unlock_response = %Mojito.Response{body: Jason.encode!(%{code: 2002, msg: "failed!"})}
 
       with_mock(Mojito, [],
         post: fn _, _, body ->
           case body |> Jason.decode!() |> Map.get("method") do
-            "account.login" -> {:ok, dummy_response_one}
-            "account.unlock" -> {:ok, dummy_response_two}
+            "account.login" -> {:ok, dummy_login_response}
+            "account.unlock" -> {:ok, dummy_unlock_response}
           end
         end
       ) do

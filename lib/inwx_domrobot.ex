@@ -127,7 +127,7 @@ defmodule InwxDomrobot do
       case tfa_info do
         {:secret, secret} -> Totpex.generate_totp(secret)
         {:totp, totp} -> totp
-        _ -> ""
+        _ -> raise "Invalid tfa information provided!"
       end
 
     payload =

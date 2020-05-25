@@ -11,9 +11,9 @@ defmodule InwxDomrobot do
 
   defmodule State do
     @type t() :: %__MODULE__{
-      endpoint: binary,
-      session: binary | nil
-    }
+            endpoint: binary,
+            session: binary | nil
+          }
 
     defstruct [:endpoint, :session]
   end
@@ -21,7 +21,7 @@ defmodule InwxDomrobot do
   @env Mix.env()
 
   @endpoints %{
-    dev:  "https://api.ote.domrobot.com/jsonrpc/",
+    dev: "https://api.ote.domrobot.com/jsonrpc/",
     test: "https://api.ote.domrobot.com/jsonrpc/",
     prod: "https://api.domrobot.com/jsonrpc/"
   }
@@ -34,23 +34,25 @@ defmodule InwxDomrobot do
 
   @spec init(keyword) :: {:ok, __MODULE__.State.t()}
   def init(args) do
-    endpoint = case Keyword.fetch(args, :endpoint) do
-      {:ok, endpoint_uri} -> endpoint_uri
-      _ -> Map.get(@endpoints, @env, @default_endpoint)
-    end
+    endpoint =
+      case Keyword.fetch(args, :endpoint) do
+        {:ok, endpoint_uri} -> endpoint_uri
+        _ -> Map.get(@endpoints, @env, @default_endpoint)
+      end
 
     {:ok, %__MODULE__.State{endpoint: endpoint}}
   end
 
   def handle_call({:login, username, password, tfa_info}, _from, state) do
-    payload = Jason.encode!(%{
-      method: "account.login",
-      params: %{
+    payload =
+      Jason.encode!(%{
+        method: "account.login",
+        params: %{
           user: username,
           pass: password,
           lang: "en"
-      }
-    })
+        }
+      })
 
     Mojito.post(state.endpoint, [], payload)
     |> handle_login(state, tfa_info)
@@ -61,21 +63,22 @@ defmodule InwxDomrobot do
   end
 
   def handle_call(:logout, _from, state) do
-    payload = Jason.encode!(%{
-      method: "account.logout",
-      params: []
-    })
+    payload =
+      Jason.encode!(%{
+        method: "account.logout",
+        params: []
+      })
 
     Mojito.post(state.endpoint, state.session, payload)
     |> handle_logout(state)
   end
 
-
   def handle_call({:query, method_name, params}, _from, state) do
-    payload = Jason.encode!(%{
-      method: method_name,
-      params: params
-    })
+    payload =
+      Jason.encode!(%{
+        method: method_name,
+        params: params
+      })
 
     Mojito.post(state.endpoint, state.session, payload)
     |> handle_query(state.session)
@@ -87,10 +90,11 @@ defmodule InwxDomrobot do
     result_code = Map.get(decoded, "code")
 
     if result_code == 1000 do
-      cookies = response.headers
-      |> Enum.filter(fn {key, _} -> key == "set-cookie" end)
-      |> Enum.at(0, {nil, nil})
-      |> elem(1)
+      cookies =
+        response.headers
+        |> Enum.filter(fn {key, _} -> key == "set-cookie" end)
+        |> Enum.at(0, {nil, nil})
+        |> elem(1)
 
       new_state = %{state | session: [{"cookies", cookies}]}
 
@@ -109,22 +113,24 @@ defmodule InwxDomrobot do
   end
 
   defp handle_unlock(tfa_info, state) do
-    otp = case tfa_info do
-      {:secret, secret} -> Totpex.generate_totp(secret)
-      {:totp, totp} -> totp
-      _ -> ""
-    end
+    otp =
+      case tfa_info do
+        {:secret, secret} -> Totpex.generate_totp(secret)
+        {:totp, totp} -> totp
+        _ -> ""
+      end
 
-    payload = Jason.encode!(%{
-      method: "account.unlock",
-      params: %{tan: otp}
-    })
+    payload =
+      Jason.encode!(%{
+        method: "account.unlock",
+        params: %{tan: otp}
+      })
 
     case Mojito.post(state.endpoint, state.session, payload) do
       {:ok, response} ->
         payload = Jason.decode!(response.body)
         result_code = Map.get(payload, "code")
-        result_msg =  Map.get(payload, "msg")
+        result_msg = Map.get(payload, "msg")
 
         if result_code == 1000 do
           {:reply, {:ok, result_code}, state}

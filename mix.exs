@@ -35,7 +35,8 @@ defmodule InwxDomrobot.Mixfile do
       {:totpex, "~> 0.1.4"},
       {:jason, "~> 1.1"},
 
-      {:ex_doc, "~> 0.14", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.14", only: :dev, runtime: false},
+      {:mock, "~> 0.3.4", only: :test}
     ]
   end
 end

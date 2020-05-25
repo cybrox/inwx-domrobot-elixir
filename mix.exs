@@ -11,14 +11,12 @@ defmodule InwxDomrobot.Mixfile do
       deps: deps(),
 
       name: "INWX DomRobot",
-      description: "Simple interface for INWX DomRobot in Elixir",
+      description: "Simple API wrapper for INWX DomRobot in Elixir",
       source_url: "https://github.com/cybrox/inwx-domrobot-elixir",
       package: package()
    ]
   end
 
-
-  # Package
   defp package do
     [
       licenses: ["MIT"],
@@ -27,21 +25,16 @@ defmodule InwxDomrobot.Mixfile do
     ]
   end
 
-
-  # Application
   def application do
     [extra_applications: [:logger]]
   end
 
-
-  # Dependencies 
   defp deps do
     [
-      {:httpoison, "~> 1.6.2"},
+      {:mojito, "~> 0.6.4"},
       {:totpex, "~> 0.1.4"},
       {:jason, "~> 1.1"},
 
-      # Development dependencies
       {:ex_doc, "~> 0.14", only: :dev, runtime: false}
     ]
   end

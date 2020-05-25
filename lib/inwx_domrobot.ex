@@ -28,8 +28,15 @@ defmodule InwxDomrobot do
 
   @default_endpoint Map.get(@endpoints, :dev)
 
+  @type request_error() :: {:error, Mojito.Error.t()}
+
   @type auth_success() :: {:ok, integer}
-  @type auth_error() :: {:unauthorized, integer} | {:unauthorized, integer, binary}
+  @type auth_error() :: {:error, {:unauthorized, integer} | {:unauthorized, integer, binary}}
+
+  @type unauth_success() :: {:ok, integer}
+  @type unauth_error() :: {:error, {integer, binary}}
+
+  @type query_response() :: {:ok, map} | {:error, Jason.DecodeError.t()}
 
   # ---
   # Server
@@ -147,8 +154,15 @@ defmodule InwxDomrobot do
   end
 
   defp handle_logout({:ok, response}, state) do
-    {:ok, decoded} = Jason.decode(response.body)
-    {:reply, {:ok, decoded}, %{state | session: nil}}
+    payload = Jason.decode!(response.body)
+    result_code = Map.get(payload, "code")
+    result_msg = Map.get(payload, "msg")
+
+    if result_code == 1500 do
+      {:reply, {:ok, 1500}, %{state | session: nil}}
+    else
+      {:reply, {:error, {result_code, result_msg}}, state}
+    end
   end
 
   defp handle_logout(resp, state) do
@@ -188,7 +202,7 @@ defmodule InwxDomrobot do
   * `{:totp, "000000"}` - Providing a TOTP directly, useful for CLI applications.
   """
   @spec login(pid, binary, binary, {atom, binary} | nil) ::
-          auth_success() | auth_success() | {:error, Mojito.Error.t()}
+          auth_success() | auth_error() | request_error()
   def login(conn, username, password, tfa_info \\ nil) do
     GenServer.call(conn, {:login, username, password, tfa_info})
   end
@@ -199,6 +213,7 @@ defmodule InwxDomrobot do
   After a successful logout, the process will no longer hold the session cookie. The login
   function will need to be used again in order to perform any further query requests.
   """
+  @spec logout(pid) :: unauth_success() | unauth_error() | request_error()
   def logout(conn) do
     GenServer.call(conn, :logout)
   end
@@ -210,7 +225,8 @@ defmodule InwxDomrobot do
   sent to the INWX API. The method name and the respective parameters used can
   be found in the official INWX API documentation.
   """
-  def query(conn, method_name, params \\ []) do
+  @spec query(pid, binary, map) :: query_response() | request_error()
+  def query(conn, method_name, params \\ %{}) do
     GenServer.call(conn, {:query, method_name, params})
   end
 end

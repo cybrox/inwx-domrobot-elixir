@@ -196,7 +196,9 @@ defmodule InwxDomrobot do
   @doc """
   Send an `account.login` request to the INWX API.
 
-  After a successful login, the process will hold the session cookie for future use.
+  After a successful login, the process will hold the session cookie for future use. Query
+  requests can now be made until the logout function is used or the session times out.
+
   When two-factor authentication is used, the `tfa_info` must be passed in the format:
   * `{:secret, "my-secret"}` - Providing the secret, the library will generate the TOTP.
   * `{:totp, "000000"}` - Providing a TOTP directly, useful for CLI applications.

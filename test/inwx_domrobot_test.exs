@@ -52,7 +52,7 @@ defmodule InwxDomrobotTest do
         })
 
       exp_unlock_header = [
-        {"cookies", "domrobot=sessioncookie; path=/"}
+        {"cookie", "domrobot=sessioncookie; path=/"}
       ]
 
       exp_unlock_payload_one =
@@ -97,7 +97,7 @@ defmodule InwxDomrobotTest do
       with_mock(Mojito, [], post: fn _, _, _ -> {:ok, dummy_login_response} end) do
         {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
         assert InwxDomrobot.login(conn, "username", "password") == {:ok, 1000}
-        assert :sys.get_state(conn).session == [{"cookies", "domrobot=sessioncookie; path=/"}]
+        assert :sys.get_state(conn).session == [{"cookie", "domrobot=sessioncookie; path=/"}]
       end
     end
 
@@ -121,7 +121,7 @@ defmodule InwxDomrobotTest do
       ) do
         {:ok, conn} = InwxDomrobot.start_link(endpoint: @dummy_endpoint)
         assert InwxDomrobot.login(conn, "username", "password") == {:ok, 1000}
-        assert :sys.get_state(conn).session == [{"cookies", "domrobot=sessioncookie; path=/"}]
+        assert :sys.get_state(conn).session == [{"cookie", "domrobot=sessioncookie; path=/"}]
       end
     end
 

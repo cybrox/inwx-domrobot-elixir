@@ -84,7 +84,7 @@ defmodule InwxDomrobot do
       })
 
     Mojito.post(state.endpoint, state.session, payload)
-    |> handle_query(state.session)
+    |> handle_query(state)
   end
 
   defp handle_login({:ok, response}, state, tfa_info) do
@@ -99,7 +99,7 @@ defmodule InwxDomrobot do
         |> Enum.at(0, {nil, nil})
         |> elem(1)
 
-      new_state = %{state | session: [{"cookies", cookies}]}
+      new_state = %{state | session: [{"cookie", cookies}]}
 
       if tfa_method != "0" do
         handle_unlock(tfa_info, new_state)
@@ -146,21 +146,21 @@ defmodule InwxDomrobot do
     end
   end
 
-  defp handle_logout({:ok, response}, _session) do
+  defp handle_logout({:ok, response}, state) do
     {:ok, decoded} = Jason.decode(response.body)
-    {:reply, {:ok, decoded}, [""]}
+    {:reply, {:ok, decoded}, %{state | session: nil}}
   end
 
-  defp handle_logout(resp, session) do
-    {:reply, resp, session}
+  defp handle_logout(resp, state) do
+    {:reply, resp, state}
   end
 
-  defp handle_query({:ok, response}, session) do
-    {:reply, Jason.decode(response.body), session}
+  defp handle_query({:ok, response}, state) do
+    {:reply, Jason.decode(response.body), state}
   end
 
-  defp handle_query(resp, session) do
-    {:reply, resp, session}
+  defp handle_query(resp, state) do
+    {:reply, resp, state}
   end
 
   # ---
